@@ -10,7 +10,7 @@ Microsoft Foundation Class (MFC)의 강력한 UI 제어 능력과 OpenCV의 영�
 * **IDE:** Visual Studio 2017
 * **Language:** C++ (MSVC)
 * **Framework:** MFC (Dialog-based)
-* **Library:** OpenCV 4.x
+* **Library:** OpenCV 4.8
 
 ## 📅 개발 로드맵 (Roadmap)
 > 이 프로젝트는 아래 4단계(Phase)에 걸쳐 점진적으로 고도화될 예정입니다.
