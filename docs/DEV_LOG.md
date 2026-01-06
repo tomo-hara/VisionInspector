@@ -31,8 +31,6 @@
 </div>
 </details>
 
----
-
 <details>
 <summary> 접기 / 펼치기 </summary>
 <div markdown="2">
@@ -65,11 +63,12 @@
 </div>
 </details>
 
+## 🐛 버그 수정 (Bug Fix) - 2026-01-06
+
 <details>
 <summary> 접기 / 펼치기 </summary>
 <div markdown="3">
 
-## 🐛 버그 수정 (Bug Fix) - 2026-01-06
 
 ### 🛑 이미지 재로드 시 충돌 (Crash on Reload)
 * **증상:** `Load Image` 버튼을 눌러 이미지를 한 번 불러온 뒤, 한번 더 이미지를 불러오려 하면 프로그램이 강제 종료되거나 `Debug Assertion Failed` 발생.
@@ -79,6 +78,16 @@
 * **해결:**
     * 객체 생성 전 `GetSafeHdc()` 및 `GetSafeHandle()`을 통해 기존 객체 존재 여부를 확인.
     * 이미 존재할 경우 `DeleteDC()`, `DeleteObject()`를 호출하여 리소스를 반환한 뒤 재생성하도록 로직 수정.
+
+### 🛑 좌표 불일치 (Coordinate Mismatch)
+* **증상:** 마우스로 드래그하여 ROI를 그릴 때, 사각형이 마우스 커서 위치보다 오른쪽 아래로 치우쳐서 그려짐.
+* **원인:**
+    * 마우스 이벤트(`OnMouseMove`)의 좌표(`point`)는 **Dialog(부모 윈도우)** 기준.
+    * `DrawMat` 함수 내 `BitBlt` 및 그리기 영역은 **Picture Control(자식 윈도우)** 기준.
+    * 두 윈도우 사이의 위치 차이(Offset)만큼 좌표 오차가 발생함.
+* **해결:**
+    * `DrawMat` 함수 내에서 ROI를 그리기 전, 전달받은 `pRectROI`에 대해 좌표 보정 수행.
+    * `rect.OffsetRect(-m_rectWnd.left, -m_rectWnd.top)` 코드를 추가하여 Dialog 좌표를 Control 내부 좌표로 변환.
 
 </div>
 </details>

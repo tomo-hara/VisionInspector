@@ -43,4 +43,4 @@ Microsoft Foundation Class (MFC)의 강력한 UI 제어 능력과 OpenCV의 영�
 *(프로젝트 생성 후 구체화 예정)*
 
 ## 변경 이력
-- [`CHANGELOG.md`](CHANGELOG.md)
+- [`CHANGELOG.md`](./docs/CHANGELOG.md)
