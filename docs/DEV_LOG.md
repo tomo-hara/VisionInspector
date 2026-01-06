@@ -64,3 +64,21 @@
     * 현재 구현된 Double Buffering 로직을 유지하되, 불필요한 임시 객체 생성을 최소화하도록 개선.
 </div>
 </details>
+
+<details>
+<summary> 접기 / 펼치기 </summary>
+<div markdown="3">
+
+## 🐛 버그 수정 (Bug Fix) - 2026-01-06
+
+### 🛑 이미지 재로드 시 충돌 (Crash on Reload)
+* **증상:** `Load Image` 버튼을 눌러 이미지를 한 번 불러온 뒤, 한번 더 이미지를 불러오려 하면 프로그램이 강제 종료되거나 `Debug Assertion Failed` 발생.
+* **원인:**
+    * `InitMemoryDC` 함수에서 `m_memDC.CreateCompatibleDC`와 `m_bitmap.CreateCompatibleBitmap`을 호출할 때, 기존에 생성된 GDI 객체(핸들)가 해제되지 않은 상태에서 덮어쓰기를 시도함.
+    * MFC 내부적으로 이미 Attach된 객체에 대해 재할당을 막는 Assertion이 동작함.
+* **해결:**
+    * 객체 생성 전 `GetSafeHdc()` 및 `GetSafeHandle()`을 통해 기존 객체 존재 여부를 확인.
+    * 이미 존재할 경우 `DeleteDC()`, `DeleteObject()`를 호출하여 리소스를 반환한 뒤 재생성하도록 로직 수정.
+
+</div>
+</details>
