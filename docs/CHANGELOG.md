@@ -13,3 +13,4 @@
 ### Fixed
 - **Crash on Reload:** 이미지 재로드 시 GDI 객체 초기화 순서 오류로 인한 충돌 해결
 - **Coordinate Mismatch:** ROI 사각형이 마우스 포인터와 어긋나는 현상 수정 (Picture Control 기준 좌표 보정)
+- **Rendering Failure:** `OnPaint` 리팩토링 시 비트맵 선택 해제 시점 오류로 인한 화면 미출력 현상 수정
