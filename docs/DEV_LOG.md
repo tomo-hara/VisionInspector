@@ -89,5 +89,13 @@
     * `DrawMat` 함수 내에서 ROI를 그리기 전, 전달받은 `pRectROI`에 대해 좌표 보정 수행.
     * `rect.OffsetRect(-m_rectWnd.left, -m_rectWnd.top)` 코드를 추가하여 Dialog 좌표를 Control 내부 좌표로 변환.
 
+### 🛑 화면 출력 불가 (Blank Screen on Rendering)
+* **증상:** `OnPaint` 핸들러로 렌더링 주도권을 넘기는 리팩토링 적용 후, 이미지가 화면에 전혀 출력되지 않음.
+* **원인:**
+    * `DrawMat` 함수 내에서 `m_memDC.SelectObject(&m_bitmap)`으로 비트맵을 선택하고, 함수 종료 직전에 `SelectObject(oldBitmap)`으로 해제함.
+    * `InvalidateRect`에 의해 비동기적으로 호출되는 `OnPaint` 시점에는 `m_memDC`에 비트맵이 연결되어 있지 않아 빈 화면(NULL)이 출력됨.
+* **해결:**
+    * **비트맵 선택 시점 변경:** `InitMemoryDC`에서 비트맵 생성 직후 `SelectObject`를 수행하고, 다이얼로그가 종료될 때까지 연결을 유지(Persistent Selection)하도록 수정.
+    * `DrawMat` 내부의 불필요한 선택/해제 로직 제거.
 </div>
 </details>
