@@ -7,6 +7,7 @@
 // [추가 1] Direct2D 및 OpenCV 헤더
 #include <d2d1.h>
 #include <opencv2/opencv.hpp>
+//#include <opencv2/opencv.hpp>
 
 // CSmartDesktopScannerDlg 대화 상자
 class CSmartDesktopScannerDlg : public CDialogEx

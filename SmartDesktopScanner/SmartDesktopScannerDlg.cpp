@@ -13,6 +13,13 @@
 #endif
 
 #pragma comment(lib, "d2d1.lib") // Direct2D 라이브러리 링크
+#pragma execution_character_set("utf-8")
+#pragma comment(lib, "opencv_core480d.lib")
+#pragma comment(lib, "opencv_video480d.lib")
+#pragma comment(lib, "opencv_videoio480d.lib")
+#pragma comment(lib, "opencv_imgcodecs480d.lib")
+#pragma comment(lib, "opencv_imgproc480d.lib")
+//#pragma comment(lib, "d2d1.lib")
 
 // CSmartDesktopScannerDlg 대화 상자
 
