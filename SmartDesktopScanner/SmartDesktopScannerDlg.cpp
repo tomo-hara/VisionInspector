@@ -1,4 +1,4 @@
-﻿r
+﻿
 // SmartDesktopScannerDlg.cpp: 구현 파일
 //
 
@@ -7,6 +7,9 @@
 #include "SmartDesktopScanner.h"
 #include "SmartDesktopScannerDlg.h"
 #include "afxdialogex.h"
+
+// [추가] 로깅 제어용 헤더
+#include <opencv2/core/utils/logger.hpp>
 
 #ifdef _DEBUG
 #define new DEBUG_NEW
@@ -30,19 +33,8 @@ CSmartDesktopScannerDlg::CSmartDesktopScannerDlg(CWnd* pParent /*=nullptr*/)
 
 CSmartDesktopScannerDlg::~CSmartDesktopScannerDlg()
 {
-	// 리소스 정리
-	DiscardDeviceResources();
-	if (m_pDWriteFactory) {
-		m_pDWriteFactory->Release();
-		m_pDWriteFactory = nullptr;
-	}
-	if (m_pDirect2dFactory) {
-		m_pDirect2dFactory->Release();
-		m_pDirect2dFactory = nullptr;
-	}
-	if (m_VideoCapture.isOpened()) {
-		m_VideoCapture.release();
-	}
+	m_Engine.CloseCamera();
+	m_Renderer.ReleaseResources();
 }
 
 void CSmartDesktopScannerDlg::DoDataExchange(CDataExchange* pDX)
@@ -50,11 +42,6 @@ void CSmartDesktopScannerDlg::DoDataExchange(CDataExchange* pDX)
 	CDialogEx::DoDataExchange(pDX);
 	DDX_Control(pDX, IDC_STATIC_VIEW, m_wndView);
 }
-
-//inline void ConvertToGray(const cv::Mat &mat)
-//{
-//	cv::cvtColor(mat, mat, cv::COLOR_BGR2GRAY);
-//}
 
 BEGIN_MESSAGE_MAP(CSmartDesktopScannerDlg, CDialogEx)
 	ON_WM_PAINT()
@@ -72,6 +59,9 @@ END_MESSAGE_MAP()
 
 BOOL CSmartDesktopScannerDlg::OnInitDialog()
 {
+	// [추가] OpenCV 내부 로깅 및 추적 끄기 (거짓 메모리 누수 차단)
+	cv::utils::logging::setLogLevel(cv::utils::logging::LOG_LEVEL_SILENT);
+
 	CDialogEx::OnInitDialog();
 
 	// 이 대화 상자의 아이콘을 설정합니다.  응용 프로그램의 주 창이 대화 상자가 아닐 경우에는
@@ -80,31 +70,16 @@ BOOL CSmartDesktopScannerDlg::OnInitDialog()
 	SetIcon(m_hIcon, FALSE);		// 작은 아이콘을 설정합니다.
 
 	// TODO: 여기에 추가 초기화 작업을 추가합니다.
-	// Direct2D Factory 생성
-	HRESULT hr = D2D1CreateFactory(D2D1_FACTORY_TYPE_SINGLE_THREADED, &m_pDirect2dFactory);
-	if (FAILED(hr)) {
-		AfxMessageBox(_T("Direct2D Factory 생성 실패!"));
+	if (!m_Renderer.Initialize(m_wndView.GetSafeHwnd())) {
+		AfxMessageBox(L"Renderer Init Failed!");
 		return FALSE;
 	}
 
-	hr = DWriteCreateFactory(DWRITE_FACTORY_TYPE_SHARED, __uuidof(IDWriteFactory), reinterpret_cast<IUnknown**>(&m_pDWriteFactory));
-	if (SUCCEEDED(hr)) {
-		hr = m_pDWriteFactory->CreateTextFormat(
-			L"Malgun Gothic", NULL,
-			DWRITE_FONT_WEIGHT_BOLD, DWRITE_FONT_STYLE_NORMAL, DWRITE_FONT_STRETCH_NORMAL,
-			20.0f, L"ko-kr", &m_pTextFormat
-		);
-	}
-
-	// 웹캠 연결 시도 (0번 카메라)
-	if (m_VideoCapture.open(0)) {
-		// 타이머 설정 (33ms = 약 30fps)
+	if (m_Engine.OpenCamera(0)) {
 		SetTimer(1001, 33, NULL);
+	} else {
+		AfxMessageBox(L"Camera Init Failed!");
 	}
-	else {
-		AfxMessageBox(_T("웹캠을 찾을 수 없습니다."));
-	}
-
 
 	return TRUE;  // 포커스를 컨트롤에 설정하지 않으면 TRUE를 반환합니다.
 }
@@ -148,160 +123,24 @@ HCURSOR CSmartDesktopScannerDlg::OnQueryDragIcon()
 void CSmartDesktopScannerDlg::OnBnClickedOk() { /*CDialogEx::OnOK();*/ }
 void CSmartDesktopScannerDlg::OnBnClickedCancel() {	CDialogEx::OnCancel(); }
 
-// [3] 리소스 관리 함수
-HRESULT CSmartDesktopScannerDlg::CreateDeviceResources()
-{
-	HRESULT hr = S_OK;
-	if (!m_pRenderTarget) {
-		//RECT rc;
-		//GetClientRect(&rc);
-		RECT rc;
-		m_wndView.GetClientRect(&rc);
-
-		D2D1_SIZE_U size = D2D1::SizeU(rc.right - rc.left, rc.bottom - rc.top);
-
-		hr = m_pDirect2dFactory->CreateHwndRenderTarget(
-			D2D1::RenderTargetProperties(),
-			D2D1::HwndRenderTargetProperties(m_wndView.GetSafeHwnd(), size),
-			&m_pRenderTarget
-		);
-
-		if (SUCCEEDED(hr)) {
-			hr = m_pRenderTarget->CreateSolidColorBrush(D2D1::ColorF(D2D1::ColorF::Yellow), &m_pBrushYellow);
-		}
-	}
-	return hr;
-}void CSmartDesktopScannerDlg::DiscardDeviceResources()
-{
-    if (m_pBitmap) { m_pBitmap->Release(); m_pBitmap = nullptr; }
-    if (m_pBrushYellow) { m_pBrushYellow->Release(); m_pBrushYellow = nullptr; }
-    if (m_pRenderTarget) { m_pRenderTarget->Release(); m_pRenderTarget = nullptr; }
-}
-
-// [4] 그리기 로직 (핵심)
-void CSmartDesktopScannerDlg::DrawMatToD2D(const cv::Mat & srcMat)
-{
-    if (srcMat.empty()) return;
-	if (!m_wndView.GetSafeHwnd()) return;
-	// 원본 보호를 위한 복제본 생성
-	cv::Mat matProc = srcMat.clone();
-
-	try {
-		//// 필터 적용
-		//ProcessImage(srcMat);
-
-		// (A) 그레이스케일 처리
-		if (m_bUseGrayscale) {
-			// [핵심 수정] 3채널 -> 1채널 변환 시 '제자리 변환(In-place)'을 피함
-			if (matProc.channels() != 1) {
-				cv::Mat tempGray;
-				cv::cvtColor(matProc, tempGray, cv::COLOR_BGR2GRAY);
-				matProc = tempGray; // 변환 후 교체
-			}
-		}
-
-		// (B) Canny Edge 처리
-		if (m_bUseCanny) {
-			// Canny는 1채널 입력이 필수
-			if (matProc.channels() != 1) {
-				cv::Mat tempGray;
-				cv::cvtColor(matProc, tempGray, cv::COLOR_BGR2GRAY);
-				matProc = tempGray;
-			}
-
-			// Canny 수행 (결과도 1채널)
-			cv::Mat tempEdge;
-			cv::Canny(matProc, tempEdge, 50, 150);
-			matProc = tempEdge; // 결과 교체
-		}
-	}
-	catch (cv::Exception &e) {
-		TRACE(L"OpenCV Error: %S\n", e.what());
-		return;
-	}
-
-    if (FAILED(CreateDeviceResources())) return;
-
-
-    // BGR -> BGRA 변환 (Direct2D 호환)
-    cv::Mat renderMat;
-	if (srcMat.channels() == 1) {
-		cv::cvtColor(matProc, renderMat, cv::COLOR_GRAY2BGRA);
-	} else if (srcMat.channels() == 3) {
-		cv::cvtColor(matProc, renderMat, cv::COLOR_BGR2BGRA);
-	} else {
-		renderMat = matProc;
-	}
-
-    HRESULT hr = S_OK;
-    D2D1_SIZE_U size = D2D1::SizeU(renderMat.cols, renderMat.rows);
-
-    // 비트맵 생성 또는 업데이트
-    if (m_pBitmap) {
-        D2D1_SIZE_F existingSize = m_pBitmap->GetSize();
-        if (existingSize.width != size.width || existingSize.height != size.height) {
-            m_pBitmap->Release();
-            m_pBitmap = nullptr;
-        }
-    }
-
-    if (!m_pBitmap) {
-        D2D1_BITMAP_PROPERTIES props;
-        props.pixelFormat = D2D1::PixelFormat(DXGI_FORMAT_B8G8R8A8_UNORM, D2D1_ALPHA_MODE_IGNORE);
-        props.dpiX = 96.0f; props.dpiY = 96.0f;
-        hr = m_pRenderTarget->CreateBitmap(size, renderMat.data, static_cast<UINT32>(renderMat.step), &props, &m_pBitmap);
-    } else {
-        hr = m_pBitmap->CopyFromMemory(NULL, renderMat.data, static_cast<UINT32>(renderMat.step));
-    }
-
-    if (FAILED(hr)) return;
-
-    // 렌더링
-    m_pRenderTarget->BeginDraw();
-	D2D1_SIZE_F targetSize = m_pRenderTarget->GetSize();
-    D2D1_RECT_F rect = D2D1::RectF(0, 0, targetSize.width, targetSize.height);
-    m_pRenderTarget->DrawBitmap(m_pBitmap, rect);
-
-	// 화면 중앙 격자 그리기
-	float cx = targetSize.width / 2.0f;
-	float cy = targetSize.height / 2.0f;
-	m_pRenderTarget->DrawLine(D2D1::Point2F(cx - 20, cy), D2D1::Point2F(cx + 20, cy), m_pBrushYellow, 2.0f);
-	m_pRenderTarget->DrawLine(D2D1::Point2F(cx, cy - 20), D2D1::Point2F(cx, cy + 20), m_pBrushYellow, 2.0f);
-
-	if (m_pTextFormat && m_pBrushYellow) {
-		CString strInfo;
-		strInfo.Format(L"Smart Scanner v1.0\nResolution : %dx%d\nnFilter: %s",
-			srcMat.cols, srcMat.rows,
-			m_bUseCanny ? L"Canny Edge" : m_bUseGrayscale ? L"Grayscale" : L"Original");
-
-		m_pRenderTarget->DrawTextW(
-			strInfo,
-			strInfo.GetLength(),
-			m_pTextFormat,
-			D2D1::RectF(10, 10, 500, 200), // LT
-			m_pBrushYellow
-		);
-	}
-
-    hr = m_pRenderTarget->EndDraw();
-
-    if (hr == D2DERR_RECREATE_TARGET) DiscardDeviceResources();
-}
-
 void CSmartDesktopScannerDlg::OnTimer(UINT_PTR nIDEvent)
 {
 	if (nIDEvent == 1001) {
 		cv::Mat frame;
-		m_VideoCapture >> frame;
-		if (!frame.empty()) {
-			DrawMatToD2D(frame);
+		if (m_Engine.GetProcessedFrame(frame, m_bUseGrayscale, m_bUseCanny)) {
+			CString strInfo;
+			strInfo.Format(L"Smart Scanner v2.0 (Refactored)\nRes: %3d x %3d\nFilter: %s",
+				frame.cols, frame.rows,
+				m_bUseCanny ? L"Canny" : (m_bUseGrayscale ? L"Gray" : L"None"));
+
+			m_Renderer.Draw(frame, strInfo);
 		}
 	}
 
 	CDialogEx::OnTimer(nIDEvent);
 }
 
-// [5] 깜빡임 방지
+// 깜빡임 방지
 BOOL CSmartDesktopScannerDlg::OnEraseBkgnd(CDC *pDC)
 {
 	return TRUE; // 배경 지우기 생략
@@ -316,21 +155,20 @@ void CSmartDesktopScannerDlg::OnSize(UINT nType, int cx, int cy)
 	if (!m_wndView.GetSafeHwnd()) return;
 
 	int nButtonAreaHeight = 50;
-	int nViewHeight = cy - nButtonAreaHeight;
-
-	if (nViewHeight < 10) nViewHeight = 10;
+	int nViewHeight = std::max(10, cy - nButtonAreaHeight);
 
 	m_wndView.MoveWindow(0, 0, cx, nViewHeight);
-
-	if (m_pRenderTarget) {
-		D2D1_SIZE_U size = D2D1::SizeU(cx, nViewHeight);
-		m_pRenderTarget->Resize(size);
-	}
 
 	CWnd *pBtnGray = GetDlgItem(IDC_GRAY_BTN);
 	if (pBtnGray) {
 		pBtnGray->MoveWindow(10, cy - 40, 100, 30);
 	}
+	CWnd *pBtnCanny = GetDlgItem(IDC_CANNY_BTN);
+	if (pBtnCanny) {
+		pBtnCanny->MoveWindow(120, cy - 40, 100, 30);
+	}
+
+	m_Renderer.Resize(cx, nViewHeight);
 }
 
 void CSmartDesktopScannerDlg::OnBnClickedGrayBtn()
@@ -342,29 +180,4 @@ void CSmartDesktopScannerDlg::OnBnClickedGrayBtn()
 	// [디버깅용] 출력창(Output Window)에서 확인
 	TRACE(_T("Gray Mode Clicked! Current State: %d\n"), m_bUseGrayscale);
 }
-
-void CSmartDesktopScannerDlg::OnBnClickedCannyBtn()
-{
-	m_bUseCanny = !m_bUseCanny;
-}
-
-
-void CSmartDesktopScannerDlg::ProcessImage(const cv::Mat &mat)
-{
-	if (mat.empty()) return;
-
-	// 1. 흑백 변환
-	if (m_bUseGrayscale) {
-		if (mat.channels() == 3) {
-			cv::cvtColor(mat, mat, cv::COLOR_BGR2GRAY);
-		}
-	}
-
-	// 2. 엣지 검출
-	if (m_bUseCanny) {
-		if (mat.channels() == 3) {
-			cv::cvtColor(mat, mat, cv::COLOR_BGR2GRAY);
-		}
-		cv::Canny(mat, mat, 50, 150);
-	}
-}
+void CSmartDesktopScannerDlg::OnBnClickedCannyBtn() { m_bUseCanny = !m_bUseCanny; }

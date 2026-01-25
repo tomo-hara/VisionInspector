@@ -200,14 +200,17 @@
     </ResourceCompile>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClInclude Include="D2DRenderer.h" />
     <ClInclude Include="framework.h" />
     <ClInclude Include="pch.h" />
     <ClInclude Include="Resource.h" />
     <ClInclude Include="SmartDesktopScanner.h" />
     <ClInclude Include="SmartDesktopScannerDlg.h" />
     <ClInclude Include="targetver.h" />
+    <ClInclude Include="VisionEngine.h" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="D2DRenderer.cpp" />
     <ClCompile Include="pch.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Create</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Create</PrecompiledHeader>
@@ -216,6 +219,7 @@
     </ClCompile>
     <ClCompile Include="SmartDesktopScanner.cpp" />
     <ClCompile Include="SmartDesktopScannerDlg.cpp" />
+    <ClCompile Include="VisionEngine.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="SmartDesktopScanner.rc" />

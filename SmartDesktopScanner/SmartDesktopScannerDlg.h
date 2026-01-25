@@ -1,11 +1,18 @@
-﻿
-// SmartDesktopScannerDlg.h: 헤더 파일
-//
+﻿/**
+ * @file SmartDesktopScannerDlg.h
+ * @brief 애플리케이션의 메인 다이얼로그 (View & Controller 역할)
+ * @details
+ * - VisionEngine(Model)과 D2DRenderer(View)를 소유하고 관리
+ * - 사용자 입력(버튼, 리사이징) 이벤트를 처리
+ */
 
 #pragma once
 
 #include <d2d1.h>
-#include <opencv2/opencv.hpp>
+#include <algorithm>
+
+#include "D2DRenderer.h"
+#include "VisionEngine.h"
 
 // CSmartDesktopScannerDlg 대화 상자
 class CSmartDesktopScannerDlg : public CDialogEx
@@ -15,22 +22,32 @@ public:
 	CSmartDesktopScannerDlg(CWnd* pParent = nullptr);	// 표준 생성자입니다.
 
 private:
-	ID2D1Factory *m_pDirect2dFactory = nullptr;
-	ID2D1HwndRenderTarget *m_pRenderTarget = nullptr;
-	ID2D1Bitmap *m_pBitmap = nullptr;
-	cv::VideoCapture m_VideoCapture; // 웹캠 제어용
-
-	ID2D1SolidColorBrush *m_pBrushYellow = nullptr;
-	IDWriteFactory *m_pDWriteFactory = nullptr;
-	IDWriteTextFormat *m_pTextFormat = nullptr;
+	//==============================//
+	/*기존 코드*/
+	//ID2D1Factory *m_pDirect2dFactory = nullptr;
+	//ID2D1HwndRenderTarget *m_pRenderTarget = nullptr;
+	//ID2D1Bitmap *m_pBitmap = nullptr;
+	//cv::VideoCapture m_VideoCapture; // 웹캠 제어용
+	//ID2D1SolidColorBrush *m_pBrushYellow = nullptr;
+	//IDWriteFactory *m_pDWriteFactory = nullptr;
+	//IDWriteTextFormat *m_pTextFormat = nullptr;
+	/*대체 코드*/
+	// 핵심 모듈 개체
+	D2DRenderer m_Renderer;
+	VisionEngine m_Engine;
+	//==============================//
 
 	bool m_bUseGrayscale = false;
 	bool m_bUseCanny = false;
+	CStatic m_wndView;
 
-	HRESULT CreateDeviceResources();
-	void DiscardDeviceResources();
-	void DrawMatToD2D(const cv::Mat &mat);
-	void ProcessImage(const cv::Mat &mat);
+	//==============================//
+	/*기존 코드*/
+	//HRESULT CreateDeviceResources();
+	//void DiscardDeviceResources();
+	//void DrawMatToD2D(const cv::Mat &mat);
+	//void ProcessImage(const cv::Mat &mat);
+	//==============================//
 
 public:
 	virtual ~CSmartDesktopScannerDlg();
@@ -61,5 +78,4 @@ public:
 	afx_msg void OnSize(UINT nType, int cx, int cy);
 	afx_msg void OnBnClickedGrayBtn();
 	afx_msg void OnBnClickedCannyBtn();
-	CStatic m_wndView;
 };
