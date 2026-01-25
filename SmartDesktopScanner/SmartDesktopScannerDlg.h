@@ -4,10 +4,8 @@
 
 #pragma once
 
-// [추가 1] Direct2D 및 OpenCV 헤더
 #include <d2d1.h>
 #include <opencv2/opencv.hpp>
-//#include <opencv2/opencv.hpp>
 
 // CSmartDesktopScannerDlg 대화 상자
 class CSmartDesktopScannerDlg : public CDialogEx
@@ -16,19 +14,25 @@ class CSmartDesktopScannerDlg : public CDialogEx
 public:
 	CSmartDesktopScannerDlg(CWnd* pParent = nullptr);	// 표준 생성자입니다.
 
-	// [추가 2] Direct2D 리소스 및 함수 선언
 private:
 	ID2D1Factory *m_pDirect2dFactory = nullptr;
 	ID2D1HwndRenderTarget *m_pRenderTarget = nullptr;
 	ID2D1Bitmap *m_pBitmap = nullptr;
 	cv::VideoCapture m_VideoCapture; // 웹캠 제어용
 
+	ID2D1SolidColorBrush *m_pBrushYellow = nullptr;
+	IDWriteFactory *m_pDWriteFactory = nullptr;
+	IDWriteTextFormat *m_pTextFormat = nullptr;
+
+	bool m_bUseGrayscale = false;
+	bool m_bUseCanny = false;
+
 	HRESULT CreateDeviceResources();
 	void DiscardDeviceResources();
 	void DrawMatToD2D(const cv::Mat &mat);
+	void ProcessImage(const cv::Mat &mat);
 
 public:
-	// 소멸자 (리소스 해제용) -> 클래스 마법사나 수동으로 추가 필요할 수 있음
 	virtual ~CSmartDesktopScannerDlg();
 
 // 대화 상자 데이터입니다.
@@ -54,4 +58,8 @@ public:
 	afx_msg void OnBnClickedCancel();
 	afx_msg void OnTimer(UINT_PTR nIDEvent);
 	afx_msg BOOL OnEraseBkgnd(CDC *pDC);
+	afx_msg void OnSize(UINT nType, int cx, int cy);
+	afx_msg void OnBnClickedGrayBtn();
+	afx_msg void OnBnClickedCannyBtn();
+	CStatic m_wndView;
 };

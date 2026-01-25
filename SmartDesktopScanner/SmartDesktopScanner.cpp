@@ -37,15 +37,15 @@ CSmartDesktopScannerApp theApp;
 
 BOOL CSmartDesktopScannerApp::InitInstance()
 {
-	//// Windows XP에서는 InitCommonControlsEx()를 필요로 합니다.
-	//// 사용하도록 지정하는 경우, Windows XP 상에서 반드시 InitCommonControlsEx()가 필요합니다.
-	//// InitCommonControlsEx()를 사용하지 않으면 창을 만들 수 없습니다.
-	//INITCOMMONCONTROLSEX InitCtrls;
-	//InitCtrls.dwSize = sizeof(InitCtrls);
-	//// 응용 프로그램에서 사용할 모든 공용 컨트롤 클래스를 포함하도록
-	//// 이 항목을 설정하십시오.
-	//InitCtrls.dwICC = ICC_WIN95_CLASSES;
-	//InitCommonControlsEx(&InitCtrls);
+	// Windows XP에서는 InitCommonControlsEx()를 필요로 합니다.
+	// 사용하도록 지정하는 경우, Windows XP 상에서 반드시 InitCommonControlsEx()가 필요합니다.
+	// InitCommonControlsEx()를 사용하지 않으면 창을 만들 수 없습니다.
+	INITCOMMONCONTROLSEX InitCtrls;
+	InitCtrls.dwSize = sizeof(InitCtrls);
+	// 응용 프로그램에서 사용할 모든 공용 컨트롤 클래스를 포함하도록
+	// 이 항목을 설정하십시오.
+	InitCtrls.dwICC = ICC_WIN95_CLASSES;
+	InitCommonControlsEx(&InitCtrls);
 
 	CWinApp::InitInstance();
 

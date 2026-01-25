@@ -35,20 +35,14 @@
 ### Configuration
 - **Complie Option(공통)**: `/utf-8` (C4819 경고 방지용)
 
-  > OpenCV 4.11.0
-  1. **Include Path**: `C:\opencv4.8\include\opencv2`
+- OpenCV 4.8.0
+  1. **Include Path**: `C:\opencv4.8\include`
+  
   2. **Library Path**: `C:\opencv4.8\x86\vc15\lib`
-  3. **Linker Input**:
-    - Debug: `opencv_world480d.lib`
-    - Release: `opencv_world480.lib`
 
-
-  > OpenCV 4.8.0
-  1. **Include Path**: `C:\opencv\build\include`
-  2. **Library Path**: `C:\opencv\build\x64\vc16\lib`
   3. **Linker Input**:
-    - Debug: `opencv_world4110d.lib`
-    - Release: `opencv_world4110.lib`
+      - Debug: `opencv_*d.lib`
+      - Release: `opencv_*.lib`
 
 ## 🚀 How to Run
 
@@ -59,6 +53,28 @@
 
 ## 📷 Screen Shot
 
+<details>
+<summary>📺 1. 초기 데모 보기</summary>
+
 ![초기 데모 영상](assets/result_Init.gif)
+
+</details>
+
+<details>
+<summary>📺 2. 출력 영역 변경, 텍스트 출력</summary>
+
+![출력 영역](assets/result_PictureCtrl.gif)
+![텍스트](assets/result_text.gif)
+
+</details>
+
+<details>
+<summary>📺 3. GrayScale, CannyEdge  </summary>
+
+![Gray, Canny 기능 오류](assets/Bug_GrayCanny.gif)
+![Gray, Canny](assets/result_GrayCanny.gif)
+
+</details>
+
 ---
 *Part of the VisionInspector Project Series.*
