@@ -1,6 +1,5 @@
-#include "pch.h"
+ï»¿#include "pch.h"
 #include "VisionEngine.h"
-
 
 VisionEngine::VisionEngine() { }
 VisionEngine::~VisionEngine() { CloseCamera(); }
@@ -25,7 +24,7 @@ bool VisionEngine::GetProcessedFrame(cv::Mat & outFrame, bool bGray, bool bCanny
     cv::Mat srcMat;
     if (!m_Capture.read(srcMat)) return false;
 
-    // ¿øº» º¸È£ ¹× Ã³¸®¿ë º¹Á¦
+    // ì›ë³¸ ë³´í˜¸ ë° ì²˜ë¦¬ìš© ë³µì œ
 	outFrame = srcMat.clone();
 
     // 1. Grayscale
@@ -39,7 +38,7 @@ bool VisionEngine::GetProcessedFrame(cv::Mat & outFrame, bool bGray, bool bCanny
 
     // 2. Canny Edge
     if (bCanny) {
-        // Canny´Â 1Ã¤³Î ÇÊ¼ö
+        // CannyëŠ” 1ì±„ë„ í•„ìˆ˜
         if (outFrame.channels() != 1) {
             cv::Mat temp;
             cv::cvtColor(outFrame, temp, cv::COLOR_BGR2GRAY);
@@ -52,5 +51,3 @@ bool VisionEngine::GetProcessedFrame(cv::Mat & outFrame, bool bGray, bool bCanny
 
     return true;
 }
-
-

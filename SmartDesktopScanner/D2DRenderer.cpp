@@ -13,7 +13,7 @@ D2DRenderer::~D2DRenderer()
 	if (m_pFactory) m_pFactory->Release();
 }
 
-void D2DRenderer::Draw(const cv::Mat &mat, const CString &overlayText)
+/*void D2DRenderer::Draw(const cv::Mat &mat, const CString &overlayText)
 {
 	if (mat.empty() || FAILED(CreateDeviceResources())) return;
 
@@ -59,6 +59,93 @@ void D2DRenderer::Draw(const cv::Mat &mat, const CString &overlayText)
 			m_pRenderTarget->DrawText(overlayText, overlayText.GetLength(), m_pTextFormat,
 				D2D1::RectF(10, 10, 500, 200), m_pBrush);
 		}
+	}
+
+	if (m_pRenderTarget->EndDraw() == D2DERR_RECREATE_TARGET) {
+		DiscardDeviceResources();
+	}
+}*/
+
+void D2DRenderer::Draw(const cv::Mat & mat, const CString & overlayText, const std::vector<VisionROI>& rois, bool isDragging, cv::Point dragStart, cv::Point dragCurr)
+{
+	if (mat.empty() || FAILED(CreateDeviceResources())) return;
+
+	cv::Mat renderMat;
+	if (mat.channels() == 1) cv::cvtColor(mat, renderMat, cv::COLOR_GRAY2BGRA);
+	else if (mat.channels() == 3) cv::cvtColor(mat, renderMat, cv::COLOR_BGR2BGRA);
+	else renderMat = mat;
+
+	HRESULT hr = S_OK;
+	D2D1_SIZE_U size = D2D1::SizeU(renderMat.cols, renderMat.rows);
+
+	if (m_pBitmap) {
+		D2D1_SIZE_F existingSize = m_pBitmap->GetSize();
+		if (existingSize.width != size.width || existingSize.height != size.height) {
+			m_pBitmap->Release(); m_pBitmap = nullptr;
+		}
+	}
+
+	if (!m_pBitmap) {
+		D2D1_BITMAP_PROPERTIES props;
+		props.pixelFormat = D2D1::PixelFormat(DXGI_FORMAT_B8G8R8A8_UNORM, D2D1_ALPHA_MODE_IGNORE);
+		props.dpiX = 96.0f;
+		props.dpiY = 96.0f;
+		hr = m_pRenderTarget->CreateBitmap(size, renderMat.data, static_cast<UINT32>(renderMat.step), &props, &m_pBitmap);
+	}
+	else {
+		hr = m_pBitmap->CopyFromMemory(NULL, renderMat.data, static_cast<UINT32>(renderMat.step));
+	}
+
+	if (FAILED(hr)) return;
+
+	m_pRenderTarget->BeginDraw();
+
+	D2D1_SIZE_F targetSize = m_pRenderTarget->GetSize();
+	m_pRenderTarget->DrawBitmap(m_pBitmap, D2D1::RectF(0, 0, targetSize.width, targetSize.height));
+
+	float cx = targetSize.width / 2.0f;
+	float cy = targetSize.height / 2.0f;
+	if (m_pBrush) {
+		m_pRenderTarget->DrawLine(D2D1::Point2F(cx - CROSSHAIR_SIZE, cy), D2D1::Point2F(cx + CROSSHAIR_SIZE, cy), m_pBrush, 2.0f);
+		m_pRenderTarget->DrawLine(D2D1::Point2F(cx, cy - CROSSHAIR_SIZE), D2D1::Point2F(cx, cy + CROSSHAIR_SIZE), m_pBrush, 2.0f);
+
+		if (m_pTextFormat) {
+			m_pRenderTarget->DrawText(overlayText, overlayText.GetLength(), m_pTextFormat,
+				D2D1::RectF(10, 10, 500, 200), m_pBrush);
+		}
+	}
+
+	D2D1_SIZE_F viewSize = m_pRenderTarget->GetSize();
+	float scaleX = viewSize.width / (float)mat.cols;
+	float scaleY = viewSize.height / (float)mat.rows;
+
+	if (m_pBrush) m_pBrush->SetColor(D2D1::ColorF(D2D1::ColorF::LimeGreen));
+
+	for (const auto &roi : rois) {
+		D2D1_RECT_F rect = D2D1::RectF(
+			roi.rect.x * scaleX,
+			roi.rect.y * scaleY,
+			(roi.rect.x + roi.rect.width)*scaleX,
+			(roi.rect.y + roi.rect.height)*scaleY
+		);
+		m_pRenderTarget->DrawRectangle(rect, m_pBrush, 2.0f);
+
+		if (m_pTextFormat) {
+			CString name(roi.name.c_str());
+			m_pRenderTarget->DrawText(name, name.GetLength(), m_pTextFormat,
+				D2D1::RectF(rect.left, rect.top - 20, rect.right, rect.top), m_pBrush);
+		}
+	}
+
+	if (isDragging) {
+		if (m_pBrush) m_pBrush->SetColor(D2D1::ColorF(D2D1::ColorF::Red));
+		D2D1_RECT_F dragRect = D2D1::RectF(
+			(float)std::min(dragStart.x, dragCurr.x),
+			(float)std::min(dragStart.y, dragCurr.y),
+			(float)std::max(dragStart.x, dragCurr.x),
+			(float)std::max(dragStart.y, dragCurr.y)
+		);
+		m_pRenderTarget->DrawRectangle(dragRect, m_pBrush, 1.5f);
 	}
 
 	if (m_pRenderTarget->EndDraw() == D2DERR_RECREATE_TARGET) {

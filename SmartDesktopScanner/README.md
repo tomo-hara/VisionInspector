@@ -23,7 +23,11 @@
   - **Canny Edge**: 윤곽선 검출
 - **On-Screen Display (OSD)**: DirectWrite를 사용하여 영상 프레임 위에 텍스트 정보(해상도, 필터 상태 등)와 그래픽(조준선)을 선명하게 오버레이 합니다.
 
-### 3. Responsive UI
+### 3. Interactive Inspection
+- **ROI Selector**: 마우스 드래그 앤 드롭으로 검사하고 싶은 영역(Region of Interest)을 직관적으로 지정합니다.
+- **Visual Feedback**: 검사 영역(초록색)과 드래그 영역(빨간색), 매칭 결과 등을 오버레이로 즉각 시각화합니다.
+
+### 4. Responsive UI
 - **Auto Resizing**: 윈도우 창 크기 변경 시 렌더 타겟과 영상 비율을 자동으로 조정하여 왜곡 없는 화면을 제공합니다.
 
 ## ⚙️ Build Environment
@@ -73,6 +77,13 @@
 
 ![Gray, Canny 기능 오류](assets/Bug_GrayCanny.gif)
 ![Gray, Canny](assets/result_GrayCanny.gif)
+
+</details>
+
+<details>
+<summary>📺 4. ROI  </summary>
+
+![ROI](assets/result_ROI.gif)
 
 </details>
 

@@ -1,18 +1,18 @@
-﻿/**
+/**
  * @file SmartDesktopScannerDlg.h
  * @brief 애플리케이션의 메인 다이얼로그 (View & Controller 역할)
  * @details
  * - VisionEngine(Model)과 D2DRenderer(View)를 소유하고 관리
  * - 사용자 입력(버튼, 리사이징) 이벤트를 처리
  */
-
 #pragma once
 
 #include <d2d1.h>
 #include <algorithm>
-
+#include <vector>
 #include "D2DRenderer.h"
 #include "VisionEngine.h"
+#include "VisionStruct.h"
 
 // CSmartDesktopScannerDlg 대화 상자
 class CSmartDesktopScannerDlg : public CDialogEx
@@ -22,33 +22,24 @@ public:
 	CSmartDesktopScannerDlg(CWnd* pParent = nullptr);	// 표준 생성자입니다.
 
 private:
-	//==============================//
-	/*기존 코드*/
-	//ID2D1Factory *m_pDirect2dFactory = nullptr;
-	//ID2D1HwndRenderTarget *m_pRenderTarget = nullptr;
-	//ID2D1Bitmap *m_pBitmap = nullptr;
-	//cv::VideoCapture m_VideoCapture; // 웹캠 제어용
-	//ID2D1SolidColorBrush *m_pBrushYellow = nullptr;
-	//IDWriteFactory *m_pDWriteFactory = nullptr;
-	//IDWriteTextFormat *m_pTextFormat = nullptr;
-	/*대체 코드*/
-	// 핵심 모듈 개체
 	D2DRenderer m_Renderer;
 	VisionEngine m_Engine;
-	//==============================//
 
 	bool m_bUseGrayscale = false;
 	bool m_bUseCanny = false;
 	CStatic m_wndView;
 
-	//==============================//
-	/*기존 코드*/
-	//HRESULT CreateDeviceResources();
-	//void DiscardDeviceResources();
-	//void DrawMatToD2D(const cv::Mat &mat);
-	//void ProcessImage(const cv::Mat &mat);
-	//==============================//
+	cv::Rect m_matchRect;
+	double m_matchScore = 0.0;
+	bool m_bInspectionMode = false;
 
+	std::vector<VisionROI> m_ROIs;
+
+	bool m_bIsDragging = false;
+	cv::Point m_ptDragStart;
+	cv::Point m_ptDragCurrent;
+
+	cv::Rect ScreenToImageRect(CRect screenRect);
 public:
 	virtual ~CSmartDesktopScannerDlg();
 
@@ -78,4 +69,8 @@ public:
 	afx_msg void OnSize(UINT nType, int cx, int cy);
 	afx_msg void OnBnClickedGrayBtn();
 	afx_msg void OnBnClickedCannyBtn();
+	afx_msg void OnBnClickedRegisterBtn();
+	afx_msg void OnLButtonDown(UINT nFlags, CPoint point);
+	afx_msg void OnMouseMove(UINT nFlags, CPoint point);
+	afx_msg void OnLButtonUp(UINT nFlags, CPoint point);
 };

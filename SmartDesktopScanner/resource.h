@@ -1,4 +1,4 @@
-﻿//{{NO_DEPENDENCIES}}
+//{{NO_DEPENDENCIES}}
 // Microsoft Visual C++에서 생성한 포함 파일입니다.
 // SmartDesktopScanner.rc에서 사용되고 있습니다.
 //
@@ -7,6 +7,7 @@
 #define IDC_GRAY_BTN                    1000
 #define IDC_CANNY_BTN                   1001
 #define IDC_STATIC_VIEW                 1002
+#define IDC_REGISTER_BTN                1003
 
 // Next default values for new objects
 // 

@@ -1,4 +1,4 @@
-﻿
+
 // SmartDesktopScannerDlg.cpp: 구현 파일
 //
 
@@ -53,6 +53,10 @@ BEGIN_MESSAGE_MAP(CSmartDesktopScannerDlg, CDialogEx)
 	ON_WM_SIZE()
 	ON_BN_CLICKED(IDC_GRAY_BTN, &CSmartDesktopScannerDlg::OnBnClickedGrayBtn)
 	ON_BN_CLICKED(IDC_CANNY_BTN, &CSmartDesktopScannerDlg::OnBnClickedCannyBtn)
+	ON_BN_CLICKED(IDC_REGISTER_BTN, &CSmartDesktopScannerDlg::OnBnClickedRegisterBtn)
+	ON_WM_LBUTTONDOWN()
+	ON_WM_MOUSEMOVE()
+	ON_WM_LBUTTONUP()
 END_MESSAGE_MAP()
 
 // CSmartDesktopScannerDlg 메시지 처리기
@@ -129,11 +133,12 @@ void CSmartDesktopScannerDlg::OnTimer(UINT_PTR nIDEvent)
 		cv::Mat frame;
 		if (m_Engine.GetProcessedFrame(frame, m_bUseGrayscale, m_bUseCanny)) {
 			CString strInfo;
-			strInfo.Format(L"Smart Scanner v2.0 (Refactored)\nRes: %3d x %3d\nFilter: %s",
+			strInfo.Format(L"Smart Scanner v2.1 (Refactored)\nRes: %3d x %3d\nFilter: %s",
 				frame.cols, frame.rows,
 				m_bUseCanny ? L"Canny" : (m_bUseGrayscale ? L"Gray" : L"None"));
 
-			m_Renderer.Draw(frame, strInfo);
+			/*m_Renderer.Draw(frame, strInfo);*/
+			m_Renderer.Draw(frame, strInfo, m_ROIs, m_bIsDragging, m_ptDragStart, m_ptDragCurrent);
 		}
 	}
 
@@ -181,3 +186,105 @@ void CSmartDesktopScannerDlg::OnBnClickedGrayBtn()
 	TRACE(_T("Gray Mode Clicked! Current State: %d\n"), m_bUseGrayscale);
 }
 void CSmartDesktopScannerDlg::OnBnClickedCannyBtn() { m_bUseCanny = !m_bUseCanny; }
+
+void CSmartDesktopScannerDlg::OnBnClickedRegisterBtn()
+{
+	if (m_ROIs.empty()) {
+		AfxMessageBox(L"먼저 마우스로 ROI를 그리시오.");
+		return;
+	}
+}
+
+cv::Rect CSmartDesktopScannerDlg::ScreenToImageRect(CRect screenRect)
+{
+	CRect rcView;
+	m_wndView.GetClientRect(&rcView);
+	if (rcView.IsRectEmpty()) return cv::Rect(0, 0, 0, 0);
+
+	int nImgWidth = m_Engine.GetWidth();
+	int nImgHeight = m_Engine.GetHeight();
+	if (nImgWidth <= 0 || nImgHeight <= 0) return cv::Rect(0, 0, 0, 0);
+
+	double scaleX = (double)nImgWidth / rcView.Width();
+	double scaleY = (double)nImgHeight / rcView.Height();
+
+	int x = (int)(screenRect.left * scaleX);
+	int y = (int)(screenRect.top * scaleY);
+	int w = (int)(screenRect.Width() * scaleX);
+	int h = (int)(screenRect.Height() * scaleY);
+
+	x = std::max(0, std::min(x, nImgWidth));
+	y = std::max(0, std::min(y, nImgHeight));
+	w = std::min(w, nImgWidth - x);
+	h = std::min(h, nImgHeight - y);
+
+	return cv::Rect(x, y, w, h);
+}
+
+void CSmartDesktopScannerDlg::OnLButtonDown(UINT nFlags, CPoint point)
+{
+	CRect rcView;
+	m_wndView.GetWindowRect(&rcView);
+	ScreenToClient(&rcView);
+
+	if (rcView.PtInRect(point)) {
+		m_bIsDragging = true;
+		SetCapture();
+
+		m_ptDragStart = cv::Point(point.x - rcView.left, point.y - rcView.top);
+		m_ptDragCurrent = m_ptDragStart;
+	}
+
+	CDialogEx::OnLButtonDown(nFlags, point);
+}
+
+
+void CSmartDesktopScannerDlg::OnMouseMove(UINT nFlags, CPoint point)
+{
+	if (m_bIsDragging)
+	{
+		CRect rcView;
+		m_wndView.GetWindowRect(&rcView);
+		ScreenToClient(&rcView);
+
+		int x = std::max(rcView.left, std::min((long)point.x, rcView.right));
+		int y = std::max(rcView.top, std::min((long)point.y, rcView.bottom));
+
+		m_ptDragCurrent = cv::Point(x - rcView.left, y - rcView.top);
+	}
+
+	CDialogEx::OnMouseMove(nFlags, point);
+}
+
+
+void CSmartDesktopScannerDlg::OnLButtonUp(UINT nFlags, CPoint point)
+{
+	if (m_bIsDragging)
+	{
+		ReleaseCapture();
+		m_bIsDragging = false;
+
+		CRect screenRect(
+			std::min(m_ptDragStart.x, m_ptDragCurrent.x),
+			std::min(m_ptDragStart.y, m_ptDragCurrent.y),
+			std::max(m_ptDragStart.x, m_ptDragCurrent.x),
+			std::max(m_ptDragStart.y, m_ptDragCurrent.y)
+		);
+
+		if (screenRect.Width() > 10 && screenRect.Height() > 10)
+		{
+			cv::Rect imgRect = ScreenToImageRect(screenRect);
+
+			int newID = (int)m_ROIs.size() + 1;
+			VisionROI newROI(newID, imgRect, "ROI_" + std::to_string(newID));
+
+			newROI.group.UpdateFromRect(imgRect);
+
+			m_ROIs.push_back(newROI);
+
+			TRACE("New ROI Added: [ID:%d] Rect(%d,%d,%d,%d)\n", newID, imgRect.x, imgRect.y, imgRect.width, imgRect.height);
+		}
+	}
+
+	CDialogEx::OnLButtonUp(nFlags, point);
+}
